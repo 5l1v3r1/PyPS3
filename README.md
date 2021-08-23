@@ -3,3 +3,10 @@ This library is very unfinished, so very unstable! If you want to use a stable l
 
 # PyPS3 PRE-ALPHA!
 Python PS3 library to write to the PS3's memory, and more
+
+# Requirements
+```
+1. Requests (pip3 install requests)
+2. Beautiful Soup4 (pip3 install bs4)
+3. WebMAN installed on the PS3!!!! (IMPORTANT)
+```
