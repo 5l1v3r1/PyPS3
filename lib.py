@@ -1,4 +1,4 @@
-import requests
+import requests, re
 from bs4 import BeautifulSoup
 
 # ************************************************************ #
@@ -129,11 +129,11 @@ class API:
 
         else:
             try:
-                re = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
-                if re.status_code == 200:
+                req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
+                if req.status_code == 200:
                     return True
                 else:
-                    return False, f'Got status code {str(re.status_code)} when connecting, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                    return False, f'Got status code {str(req.status_code)} when connecting, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
             except Exception as e:
                 print(f'[PyPS3] [CONNECT] [EXCEPTION] {str(e)}')
@@ -146,11 +146,11 @@ class API:
         else:
             try:
                 if self.connect(ps3ip):
-                    re = requests.get(f'http://{ps3ip}/reboot.ps3?{type}')
-                    if re.status_code == 200:
+                    req = requests.get(f'http://{ps3ip}/reboot.ps3?{type}')
+                    if req.status_code == 200:
                         return True
                     else:
-                        return False, f'Got status code {str(re.status_code)} when rebooting console, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                        return False, f'Got status code {str(req.status_code)} when rebooting console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
                 else:
                     return False, 'Console could not be found'
@@ -166,12 +166,12 @@ class API:
         else:
             try:
                 if self.connect(ps3ip):
-                    re = requests.get(f'http://{ps3ip}/netstatus.ps3?{type.lower()}')
-                    if not re.status_code == 200:
-                        return False, f'Got status code {str(re.status_code)} when shutting down {type.upper()} server, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                    req = requests.get(f'http://{ps3ip}/netstatus.ps3?{type.lower()}')
+                    if not req.status_code == 200:
+                        return False, f'Got status code {str(req.status_code)} when shutting down {type.upper()} server, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
-                    if re.text == '': # FTP is enabled
-                        requests.get(f'http://{ps3ip}/netstatus.ps3?stop-{type.lower()}') # Disable FTP
+                    if re.text == '':
+                        requests.get(f'http://{ps3ip}/netstatus.ps3?stop-{type.lower()}')
                         return True
                     else:
                         return False, f'{type.upper()} server is already stopped.'
@@ -190,11 +190,11 @@ class API:
         else:
             try:
                 if self.connect(ps3ip):
-                    re = requests.get(f'http://{ps3ip}/shutdown.ps3')
-                    if re.status_code == 200:
+                    req = requests.get(f'http://{ps3ip}/shutdown.ps3')
+                    if req.status_code == 200:
                         return True
                     else:
-                        return False, f'Got status code {str(re.status_code)} when shutting down console, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                        return False, f'Got status code {str(req.status_code)} when shutting down console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
                 
                 else:
                     return False, 'Console could not be found.'
@@ -223,11 +223,11 @@ class API:
                 # Blink Alt3 = 6
                 
                 if self.connect(ps3ip):
-                    re = requests.get(f'http://{ps3ip}/led.ps3mapi?color={led_clr}&mode={led_mode}')
-                    if re.status_code == 200:
+                    req = requests.get(f'http://{ps3ip}/led.ps3mapi?color={led_clr}&mode={led_mode}')
+                    if req.status_code == 200:
                         return True
                     else:
-                        return False, f'Got status code {str(re.status_code)} when setting LED, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                        return False, f'Got status code {str(req.status_code)} when setting LED, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
                 else:
                     return False, 'Console could not be found.'
@@ -247,11 +247,11 @@ class API:
                     # twice = 2
                     # triple = 3
 
-                    re = requests.get(f'http://{ps3ip}/buzzer.ps3mapi?mode={str(mode)}') # buzz endpoint
-                    if re.status_code == 200:
+                    req = requests.get(f'http://{ps3ip}/buzzer.ps3mapi?mode={str(mode)}') # buzz endpoint
+                    if req.status_code == 200:
                         return True
                     else:
-                        return False, f'Got status code {str(re.status_code)} when buzzing, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                        return False, f'Got status code {str(req.status_code)} when buzzing, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
                 else:
                     return False, 'Console could not be found.'
@@ -266,13 +266,13 @@ class API:
         else:
             if self.connect(ps3ip):
                 try:
-                    re = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
+                    req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
 
-                    if re.status_code == 200:
-                        soup = BeautifulSoup(re.text.encode('utf-8'), 'html.parser')
+                    if req.status_code == 200:
+                        soup = BeautifulSoup(req.text.encode('utf-8'), 'html.parser')
                         return soup.findAll('a', attrs={'class': 's'})
                     else:
-                        return False, f'Got status code {str(re.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                        return False, f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
                 
                 except Exception as e:
                     print(f'[PyPS3] [GETCONSOLEINFO] [EXCEPTION] {str(e)}')
@@ -303,29 +303,76 @@ class API:
                 print(f'[PyPS3] [GETFIRMWARE] [EXCEPTION] {str(e)}')
                 return False, str(e)
     
-    def getcurrentgame(self, div=None):
-        if div == None:
-            return False, 'Div is None'
+    def getcurrentgame(self, ps3ip=None):
+        if ps3ip == None:
+            return False, 'Console IP is None'
 
         else:
             try:
-                soup = BeautifulSoup(div.text, 'html.parser')
-                strings = soup.findAll('h2')
-                res = strings[0].text
-                game = None
+                req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
 
-                if res.startswith('BL') or res.startswith('NP') or res.startswith('BC'):
-                    game = res.split(' ', 1)[1].encode('ascii', 'ignore').decode()
+                if req.status_code == 200:
+                    soup = BeautifulSoup(req.text, 'html.parser')
+                    strings = soup.findAll('h2')
+                    res = strings[0].text
+                    game = None
 
-                else: 
-                    game = 'XMB Menu'
-                
-                return game
+                    if res.startswith('BL') or res.startswith('NP') or res.startswith('BC'):
+                        game = res.split(' ', 1)[1].encode('ascii', 'ignore').decode()
+
+                    else: 
+                        game = 'XMB Menu'
+                    
+                    return True, game
+    
+                else:
+                    return False, f'Got status code {str(req.status_code)} when getting game, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+
 
             except Exception as e:
                 print(f'[PyPS3] [GETCURRENTGAME] [EXCEPTION] {str(e)}')
                 return False, str(e)
 
+
+    def getproclist(self, ps3ip=None):
+        if ps3ip == None:
+            return False, 'Console IP is None.'
+        
+        else:
+            try:
+                req = requests.get(f'http://{ps3ip}/home.ps3mapi/sman.ps3')
+                if req.status_code == 200:
+                    #re.findall('\<option value="(.*?)\</option>', kek)
+                    regex = '\<select name="proc">(.*?)\</select>'
+
+                    return True, re.findall(regex, req.text)
+                else:
+                    return False, f'Got status code {str(req.status_code)} when getting process list, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+            
+            except Exception as e:
+                print(f'[PyPS3] [GETPROCLIST] [EXCEPTION] {str(e)}')
+                return False, str(e)
+    
+    def getprocs(self, ps3ip=None):
+        if ps3ip == None:
+            return False, 'Console IP is None.'
+        
+        else:
+            try:
+                procs = self.getproclist(ps3ip)
+                procs_list = {}
+                for proc in re.findall('\<option value="(.*?)\</option>', procs[1][0]):
+                    pid, proc_name = proc.split('"/>')
+                    if proc_name.startswith('01000300') or proc_name.startswith('01000400'): pass
+                    else: procs_list.update({pid: proc_name})
+                
+                if len(procs_list) <= 0:
+                    return True, 'No processes found.'
+                return True, procs_list
+
+            except Exception as e:
+                print(f'[PyPS3] [GETPROCS] [EXCEPTION] {str(e)}')
+                return False, str(e)
 
     def memwrite(self, ps3ip=None, process=None, patch_addr=None, hex_code=None): # write to memory
         if ps3ip == None \
@@ -336,11 +383,11 @@ class API:
 
         else:
             try:
-                re = requests.get(f'http://{ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_code}')
-                if re.status_code == 200:
+                req = requests.get(f'http://{ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_code}')
+                if req.status_code == 200:
                     return True
                 else:
-                    return False, f'Got status code {str(re.status_code)} when writing to memory, which means "{self.HTTP_RESPONSE_CODES[re.status_code]}".'
+                    return False, f'Got status code {str(req.status_code)} when writing to memory, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
 
             except Exception as e:
                 print(f'[PyPS3] [MEMWRITE] [EXCEPTION] {str(e)}')
