@@ -1,4 +1,4 @@
-import requests, re
+import requests, re, socket
 from bs4 import BeautifulSoup
 
 # ************************************************************ #
@@ -129,11 +129,14 @@ class API:
 
         else:
             try:
-                req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
-                if req.status_code == 200:
-                    return True
-                else:
-                    return False, f'Got status code {str(req.status_code)} when connecting, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+
+                sock_connect = sock.connect_ex((ps3ip, 80))
+                sock.close()
+
+                if sock_connect == 0: return True
+                else: return False, 'Console did not respond.'
 
             except Exception as e:
                 print(f'[PyPS3] [CONNECT] [EXCEPTION] {str(e)}')
