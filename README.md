@@ -10,3 +10,8 @@ Python PS3 library to write to the PS3's memory, and more
 2. Beautiful Soup4 (pip3 install bs4)
 3. WebMAN installed on the PS3!!!! (IMPORTANT)
 ```
+
+# Credits
+- Nexus, for creating the library
+- AldosTools, for creating WebMAN
+- GeoHotz, for pwning the PS3 lol
