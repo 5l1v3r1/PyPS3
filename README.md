@@ -14,4 +14,5 @@ Python PS3 library to write to the PS3's memory, and more
 # Credits
 - Nexus, for creating the library
 - AldosTools, for creating WebMAN
+- Vivitchka, for some functions and the idea to use WebMAN 
 - GeoHotz, for pwning the PS3 lol
