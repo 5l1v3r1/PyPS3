@@ -12,7 +12,7 @@ Python PS3 library to write to the PS3's memory, and more
 ```
 # Usage
 Example usage:
-```
+```py
 import lib
 
 class Mods:
