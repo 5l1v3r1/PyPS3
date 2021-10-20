@@ -82,7 +82,7 @@ while 1:
 ```
 
 # Credits
-- Nexus, for creating the library
-- AldosTools, for creating WebMAN
-- Vivitchka, for some functions and the idea to use WebMAN 
-- GeoHotz, for pwning the PS3 lol
+- [Nexus](https://github.com/Nexuzzzz), for creating the library
+- [AldosTools](https://github.com/aldostools), for creating WebMAN (credits to DeanK for creating the original WebMAN)
+- [Vivitchka](https://github.com/inthecatsdreams), for some functions and the idea to use WebMAN 
+- [GeoHotz](https://github.com/geohot), for pwning the PS3 lol
