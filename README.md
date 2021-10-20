@@ -11,7 +11,7 @@ Python PS3 library to write to the PS3's memory, and more
 3. WebMAN installed on the PS3!!!! (IMPORTANT)
 ```
 # Usage
-### All examples are for Bo2 zombies
+### All examples are for Bo2 zombies, tested on a 4.84 DEX PS3
 
 Writing to a single address with a single byte
 ```py
