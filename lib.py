@@ -57,7 +57,7 @@ class API:
                 sock_connect = sock.connect_ex((ps3ip, 80))
                 sock.close()
 
-                if sock_connect is 0: # we are able to connect
+                if sock_connect == 0: # we are able to connect
                     Core.ps3ip = ps3ip
                     return True
             except Exception:
@@ -194,9 +194,9 @@ class API:
             except Exception:
                 raise GetFirmwareException('Unable to parse firmware')
     
-    def getcurrentgame(self) -> str:
+    def getgamename(self) -> str:
         '''
-        Gets the current game (XMB Menu if no game is being played)
+        Gets the current game name (XMB Menu if no game is being played)
 
         :return str: Returns the game name
         '''
@@ -239,10 +239,11 @@ class API:
             except Exception:
                 raise GetProcListException('Failed to parse process list')
     
-    def getprocs(self) -> dict:
+    def getprocs(self, gameonly=True) -> dict:
         '''
         Gets the current game(s)
         
+        :param gameonly bool: Wether we want the full list, or just the game
         :return dict: Returns the running games in a dict
         '''
 
@@ -262,7 +263,7 @@ class API:
                 if len(procs_list) <= 0:
                     return 'No processes found.'
 
-                return procs_list
+                return procs_list if not gameonly else list(procs_list[1])[0]
             except Exception:
                 raise GetProcsException('Failed to parse games')
 
@@ -271,7 +272,7 @@ class API:
         Patches a specific address with a hex value
         
         :param process str: The process to write it to
-        :param patch_addr str: The patch address
+        :param patch_addr str/list: The patch address (or addresses)
         :param hex_value str: The new hex value to patch
         '''
 
@@ -281,9 +282,17 @@ class API:
         elif hex_value == None: raise HexValueIsNone('Hex value can\'t be none!')
         else:
             try:
-                req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_value}')
-                if req.status_code == 200: return True
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                
+                if type(patch_addr) == list:
+                    for addr in patch_addr:
+                        req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={addr}&val={hex_value}')
+                        if req.status_code == 200: continue
+                        else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                else:
+                    req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_value}')
+
+                    if req.status_code == 200: return True
+                    else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
 
             except Exception:
                 raise MemWriteException('Failed to write to console memory')

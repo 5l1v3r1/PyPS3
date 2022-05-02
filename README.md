@@ -6,53 +6,60 @@ Python PS3 library to write to the PS3's memory, and more
 
 # Requirements
 ```
-1. Requests (pip3 install requests)
-2. Beautiful Soup4 (pip3 install bs4)
-3. WebMAN installed on the PS3!!!! (IMPORTANT)
+1. All depencies installed (pip install -r requirements.txt)
+2. WebMAN installed on the PS3!!!! (Download it from here; https://github.com/aldostools/webMAN-MOD/releases)
 ```
+
 # Usage
-### All examples are for Bo2 zombies, tested on a 4.84 DEX PS3
+## All examples are for Bo2 zombies, tested on a 4.84 DEX PS3
 
-Writing to a single address with a single byte
+### Writing to a single address with a single byte
 ```py
 import lib
 
 ip = input('IP: ') # get PS3 address
-proc = list(lib.API().getprocs(ip)[1])[0] # get game process
+if lib.API().connect(ip):
+	print('Connected!')
 
-# write to PS3
-lib.API().memwrite(ip, proc, '1780F43', '05') # enable godmode
+	# write to PS3
+	lib.API().memwrite(ip, proc, '1780F43', '05') # enable godmode
 ```
+
 ----
 
-Writing to multiple addresses with a multiple bytes
+### Writing to multiple addresses with a multiple bytes
 ```py
 import lib
 
 ip = input('IP: ') # get PS3 address
-proc = list(lib.API().getprocs(ip)[1])[0] # get game process
+if lib.API().connect(ip):
+	print('Connected!')
 
-# write to PS3
-lib.API().memwrite(ip, proc, '1780F43', '05') # enable godmode
-lib.API().memwrite(ip, proc, '1CB7BF8', '3E 80') # enable slowmotion mode
-lib.API().memwrite(ip, proc, '1CAF9D8', '41 48') # enable low gravity
+	proc = lib.API().getprocs(ip) # get game process
+
+	# write to PS3
+	lib.API().memwrite(proc, '1780F43', '05') # enable godmode
+	lib.API().memwrite(proc, '1CB7BF8', '3E 80') # enable slowmotion mode
+	lib.API().memwrite(proc, '1CAF9D8', '41 48') # enable low gravity
 ```
+
 ----
 
-Writing to multiple addresses for a single mod
+### Writing to multiple addresses for a single mod
 ```py
 import lib
 
 ip = input('IP: ') # get PS3 address
-proc = list(lib.API().getprocs(ip)[1])[0] # get game process
+if lib.API().connect(ip):
+	print('Connected!')
 
-# write to PS3
-for addr in ['1CAF0D8', '1CAF138', '1CAF198']: # this is to enable the far knife mod
-    lib.API().memwrite(ip, proc, addr, '49 FF FF') # write to the memory
+	proc = lib.API().getprocs(ip) # get game process
+	lib.API().memwrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49 FF FF') # write to the memory
 ```
+
 ----
 
-Basic Bo2 zombies RTM tool
+### Basic Bo2 zombies RTM tool
 ```py
 import lib
 
@@ -60,25 +67,29 @@ class Mods:
 	def __init__(self):
 		self.OFFSET_ZM_GODMODE = '1780F43'
 	
-	def dogodmode(self, enable, ip, proc):
+	def dogodmode(self, enable, proc):
 		if enable:
-			if lib.API().memwrite(ip, proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
+			if lib.API().memwrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
 		
 		elif not enable:
-			if lib.API().memwrite(ip, proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
+			if lib.API().memwrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
 
 ip = input('IP: ')
-proc = list(lib.API().getprocs(ip)[1])[0]
+if lib.API().connect(ip):
+	print('Connected!')
 
-while 1:
-	mod = input('Enter mod: ')
-	mod_args = mod.split(' ')
+	proc = lib.API().getprocs(ip)
 
-	if mod_args[0] == 'godmode':
-		if mod_args[1] == 'enable':
-			Mods().dogodmode(True, ip, proc)
-		elif mod_args[1] == 'disable':
-			Mods().dogodmode(False, ip, proc)
+	while 1:
+		mod = input('Enter mod: ')
+		mod_args = mod.split(' ')
+
+		if mod_args[0] == 'godmode':
+			if mod_args[1] == 'enable':
+				Mods().dogodmode(True, proc)
+
+			elif mod_args[1] == 'disable':
+				Mods().dogodmode(False, proc)
 ```
 
 # Credits
