@@ -19,10 +19,10 @@ import lib
 
 ip = input('IP: ') # get PS3 address
 if lib.API().connect(ip):
-	print('Connected!')
+    print('Connected!')
 
-	# write to PS3
-	lib.API().memwrite(ip, proc, '1780F43', '05') # enable godmode
+    # write to PS3
+    lib.API().memwrite(ip, proc, '1780F43', '05') # enable godmode
 ```
 
 ----
@@ -33,14 +33,14 @@ import lib
 
 ip = input('IP: ') # get PS3 address
 if lib.API().connect(ip):
-	print('Connected!')
+    print('Connected!')
 
-	proc = lib.API().getProcs(ip) # get game process
+    proc = lib.API().getProcs(ip) # get game process
 
-	# write to PS3
-	lib.API().memWrite(proc, '1780F43', '05') # enable godmode
-	lib.API().memWrite(proc, '1CB7BF8', '3E 80') # enable slowmotion mode
-	lib.API().memWrite(proc, '1CAF9D8', '41 48') # enable low gravity
+    # write to PS3
+    lib.API().memWrite(proc, '1780F43', '05') # enable godmode
+    lib.API().memWrite(proc, '1CB7BF8', '3E80') # enable slowmotion mode
+    lib.API().memWrite(proc, '1CAF9D8', '4148') # enable low gravity
 ```
 
 ----
@@ -51,10 +51,10 @@ import lib
 
 ip = input('IP: ') # get PS3 address
 if lib.API().connect(ip):
-	print('Connected!')
+    print('Connected!')
 
-	proc = lib.API().getProcs(ip) # get game process
-	lib.API().memWrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49 FF FF') # write to the memory
+    proc = lib.API().getProcs(ip) # get game process
+    lib.API().memWrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49FFFF') # write to the memory
 ```
 
 ----
@@ -64,32 +64,32 @@ if lib.API().connect(ip):
 import lib
 
 class Mods:
-	def __init__(self):
-		self.OFFSET_ZM_GODMODE = '1780F43'
-	
-	def dogodmode(self, enable, proc):
-		if enable:
-			if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
-		
-		elif not enable:
-			if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
+    def __init__(self):
+        self.OFFSET_ZM_GODMODE = '1780F43'
+    
+    def dogodmode(self, enable, proc):
+        if enable:
+            if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
+        
+        elif not enable:
+            if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
 
 ip = input('IP: ')
 if lib.API().connect(ip):
-	print('Connected!')
+    print('Connected!')
 
-	proc = lib.API().getProcs(ip)
+    proc = lib.API().getProcs(ip)
 
-	while 1:
-		mod = input('Enter mod: ')
-		mod_args = mod.split(' ')
+    while 1:
+        mod = input('Enter mod: ')
+        mod_args = mod.split(' ')
 
-		if mod_args[0] == 'godmode':
-			if mod_args[1] == 'enable':
-				Mods().dogodmode(True, proc)
+        if mod_args[0] == 'godmode':
+            if mod_args[1] == 'enable':
+                Mods().dogodmode(True, proc)
 
-			elif mod_args[1] == 'disable':
-				Mods().dogodmode(False, proc)
+            elif mod_args[1] == 'disable':
+                Mods().dogodmode(False, proc)
 ```
 
 # Credits
