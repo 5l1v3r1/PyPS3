@@ -1,6 +1,3 @@
-import requests, re, socket
-from bs4 import BeautifulSoup
-
 # ************************************************************ #
 #       Library created by Nexus, on 22 August 2021.           #
 # ************************************************************ #
@@ -18,8 +15,8 @@ from bs4 import BeautifulSoup
 # License along with this program. If not, see                 #
 # http://www.gnu.org/licenses/.                                #
 #                                                              #
-# (C) 2021-2021 PyPS3 by Nexus                                 #
-# (C) 2010-2021 multiMAN/webMAN/sMAN/sLaunch/prepNTFS by DeanK #
+# (C) 2021-2022 PyPS3 by Nexus                                 #
+# (C) 2010-2022 multiMAN/webMAN/sMAN/sLaunch/prepNTFS by DeanK #
 #                                                              #
 # THE SOFTWARE IS DISTRIBUTED "AS IS". NO WARRANTY OF ANY KIND #
 # IS EXPRESSED OR IMPLIED. YOU USE AT YOUR OWN RISK. NEITHER   #
@@ -33,184 +30,85 @@ from bs4 import BeautifulSoup
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.                   #
 # ************************************************************ #
 
+import requests, re, socket
+from bs4 import BeautifulSoup, ResultSet
+
+from src.exceptions import *
+from src.core import Core
+
 class API:
     def __init__(self):
-        self.HTTP_RESPONSE_CODES = {
-            # 1xx informational response
-            100: 'Continue',
-            101: 'Switching Protocols',
-            102: 'Processing',
-            103: 'Early Hints',
+        pass
 
-            # 2xx success,
-            200: 'OK',
-            201: 'Created',
-            202: 'Accepted',
-            203: 'Non-Authoritative Information',
-            204: 'No Content',
-            205: 'Reset Content',
-            206: 'Partial Content',
-            207: 'Multi-Status',
-            208: 'Already Reported',
-            226: 'IM Used',
+    def connect(self, ps3ip=None) -> bool: # check if its up
+        '''
+        Connecs to the PS3
 
-            # 3xx redirection
-            300: 'Multiple Choices',
-            301: 'Moved Permanently',
-            302: 'Found',
-            303: 'See Other',
-            304: 'Not Modified',
-            305: 'Use Proxy',
-            306: 'Switch Proxy',
-            307: 'Temporary Redirect',
-            308: 'Permanent Redirect',
+        :param ps3ip str: The Console IP address to connect to
+        :return bool: True, False
+        '''
 
-            # 4xx client errors, you fucked up
-            400: 'Bad Request',
-            401: 'Unauthorized',
-            402: 'Payment Required',
-            403: 'Forbidden',
-            404: 'Not Found',
-            405: 'Method Not Allowed',
-            406: 'Not Acceptable',
-            407: 'Proxy Authentication Required',
-            408: 'Request Timeout',
-            409: 'Conflict',
-            410: 'Gone',
-            411: 'Length Required',
-            412: 'Precondition Failed',
-            413: 'Payload Too Large',
-            414: 'URI Too Long',
-            415: 'Unsupported Media Type',
-            416: 'Range Not Satisfiable',
-            417: 'Expectation Failed',
-            418: 'I\'m a teapot',
-            421: 'Misdirected Request',
-            422: 'Unprocessable Entity',
-            423: 'Locked',
-            424: 'Failed Dependency',
-            425: 'Too Early',
-            426: 'Upgrade Required',
-            428: 'Precondition Required',
-            429: 'Too Many Requests',
-            431: 'Request Header Fields Too Large',
-            451: 'Unavailable For Legal Reasons',
-
-            # 5xx server errors, they fucked up
-            500: 'Internal Server Error',
-            501: 'Not Implemented',
-            502: 'Bad Gateway',
-            503: 'Service Unavailable',
-            504: 'Gateway Timeout',
-            505: 'HTTP Version Not Supported',
-            506: 'Variant Also Negotiates',
-            507: 'Insufficient Storage',
-            508: 'Loop Detected',
-            509: 'Bandwidth Limit Exceeded',
-            510: 'Not Extended',
-            511: 'Network Authentication Required',
-            529: 'Site is overloaded',
-            530: 'Site is frozen',
-            598: 'Network read timeout error',
-
-            # CloudFlare response codes, don't know why anyone would use CF on a PS3 lol
-            520: 'Web Server Returned an Unknown Error',
-            521: 'Web Server Is Down',
-            522: 'Connection Timed Out',
-            523: 'Origin Is Unreachable',
-            524: 'A Timeout Occurred',
-            525: 'SSL Handshake Failed',
-            526: 'Invalid SSL Certificate'
-        }
-
-    def connect(self, ps3ip=None): # check if its up
-        if ps3ip == None:
-            return False, 'Console IP is None.'
-
+        if ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1)
+                sock.settimeout(5)
 
                 sock_connect = sock.connect_ex((ps3ip, 80))
                 sock.close()
 
-                if sock_connect == 0: return True
-                else: return False, 'Console did not respond.'
-
-            except Exception as e:
-                print(f'[PyPS3] [CONNECT] [EXCEPTION] {str(e)}')
-                return False, str(e)
+                if sock_connect is 0: # we are able to connect
+                    Core.ps3ip = ps3ip
+                    return True
+            except Exception:
+                raise ConsoleConnectionError('Failed to connec to the PS3')
     
-    def reboot(self, ps3ip=None, type='hard'):
-        if ps3ip == None or not type in ['soft', 'hard', 'quick', 'vsh']:
-            return False, 'Console IP is None or Reboot Type is invalid.'
+    def reboot(self, rbt_type='hard') -> bool:
+        '''
+        Reboots the PS3
 
+        :param rbt_type str: Reboot type (soft, hard, quick, vsh)
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        if not rbt_type in ['soft', 'hard', 'quick', 'vsh']: raise InvalidRebootType('Reboot type is invalid')
         else:
             try:
-                if self.connect(ps3ip):
-                    req = requests.get(f'http://{ps3ip}/reboot.ps3?{type}')
-                    if req.status_code == 200:
-                        return True
-                    else:
-                        return False, f'Got status code {str(req.status_code)} when rebooting console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
-
+                req = requests.get(f'http://{Core.ps3ip}/reboot.ps3?{type}')
+                if req.status_code == 200: return True
                 else:
-                    return False, 'Console could not be found'
-
-            except Exception as e:
-                print(f'[PyPS3] [REBOOT] [EXCEPTION] {str(e)}')
-                return False, str(e)
+                    raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when rebooting console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+            except Exception:
+                return False
     
-    def stopserver(self, ps3ip=None, type=None): # NEEDS TESTING
-        if ps3ip == None or type == None:
-            return False, 'Console IP/Server Type is None.'
+    def shutdown(self) -> bool:
+        '''
+        Shuts the PS3 down
+
+        :return bool: True, False
+        '''
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        else:
+            try:
+                req = requests.get(f'http://{Core.ps3ip}/shutdown.ps3')
+                if req.status_code == 200: return True
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when shutting down console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+
+            except Exception:
+                return False
+    
+    def led(self, led_clr=None, led_mode=None) -> bool:
+        '''
+        Change the PS3 LED lights
         
-        else:
-            try:
-                if self.connect(ps3ip):
-                    req = requests.get(f'http://{ps3ip}/netstatus.ps3?{type.lower()}')
-                    if not req.status_code == 200:
-                        return False, f'Got status code {str(req.status_code)} when shutting down {type.upper()} server, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
-
-                    if re.text == '':
-                        requests.get(f'http://{ps3ip}/netstatus.ps3?stop-{type.lower()}')
-                        return True
-                    else:
-                        return False, f'{type.upper()} server is already stopped.'
-                
-                else:
-                    return False, 'Console could not be found.'
-            
-            except Exception as e:
-                print(f'[PyPS3] [STOPSERVER] [EXCEPTION] {str(e)}')
-                return False, str(e)
-    
-    def shutdown(self, ps3ip=None):
-        if ps3ip == None:
-            return False, 'Console IP is None.'
-
-        else:
-            try:
-                if self.connect(ps3ip):
-                    req = requests.get(f'http://{ps3ip}/shutdown.ps3')
-                    if req.status_code == 200:
-                        return True
-                    else:
-                        return False, f'Got status code {str(req.status_code)} when shutting down console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
-                
-                else:
-                    return False, 'Console could not be found.'
-
-            except Exception as e:
-                print(f'[PyPS3] [SHUTDOWN] [EXCEPTION] {str(e)}')
-                return False, str(e)
-    
-    def led(self, ps3ip=None, led_clr=None, led_mode=None):
-        if ps3ip == None or led_clr == None or led_mode == None\
-        or not led_clr in [0, 1, 2] or not led_mode in [0, 1, 2, 3, 4, 5, 6]:
-            return False, 'Console IP/LED Color/LED Mode is None or LED Color/LED Mode is invalid.'
-        
+        :param led_clr int: The color (red=0, green=1, yellow=2)
+        :param led_mode int: The LED mode (off=0, on=1, blink fast=2, blink slow=3)
+        :return bool: True, False
+        '''
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        elif led_clr == None or not led_clr in [0, 1, 2]: raise InvalidLedCode('Invalid LED code') 
+        elif led_mode == None or not led_mode in [0, 1, 2, 3, 4, 5, 6]: raise InvalidLedMode('Invalid LED mode')
         else:
             try:
                 # Red = 0
@@ -225,68 +123,62 @@ class API:
                 # Blink Alt2 = 5
                 # Blink Alt3 = 6
                 
-                if self.connect(ps3ip):
-                    req = requests.get(f'http://{ps3ip}/led.ps3mapi?color={led_clr}&mode={led_mode}')
-                    if req.status_code == 200:
-                        return True
-                    else:
-                        return False, f'Got status code {str(req.status_code)} when setting LED, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
-
-                else:
-                    return False, 'Console could not be found.'
-
-            except Exception as e:
-                print(f'[PyPS3] [LED] [EXCEPTION] {str(e)}')
-                return False, str(e)
+                req = requests.get(f'http://{Core.ps3ip}/led.ps3mapi?color={str(led_clr)}&mode={str(led_mode)}')
+                if req.status_code == 200: return True
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when changing led, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+            except Exception:
+                return False
     
-    def buzz(self, ps3ip=None, mode=1):
-        if ps3ip == None or mode not in [1, 2, 3]:
-            return False, 'Console IP is None or Mode is invalid.'
+    def buzz(self, buzz_mode=1) -> bool:
+        '''
+        Haha PS3 go buzz buzz, this function makes the Playstation buzzer go off
+
+        :param buzz_mode int: The buzz mode (once=1, twice=2, triple=3)
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        elif buzz_mode == None or not buzz_mode in [1, 2,3]: raise InvalidBuzzMode('Invalid buzz mode') 
         
         else:
             try:
-                if self.connect(ps3ip):
-                    # once = 1
-                    # twice = 2
-                    # triple = 3
+                # once = 1
+                # twice = 2
+                # triple = 3
 
-                    req = requests.get(f'http://{ps3ip}/buzzer.ps3mapi?mode={str(mode)}') # buzz endpoint
-                    if req.status_code == 200:
-                        return True
-                    else:
-                        return False, f'Got status code {str(req.status_code)} when buzzing, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+                req = requests.get(f'http://{Core.ps3ip}/buzzer.ps3mapi?mode={str(buzz_mode)}') # buzz endpoint
+                if req.status_code == 200: return True
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when sounding buzzer, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+            except Exception:
+                return False
 
-                else:
-                    return False, 'Console could not be found.'
-
-            except Exception as e:
-                print(f'[PyPS3] [BUZZ] [EXCEPTION] {str(e)}')
-
-    def getconsoleinfo(self, ps3ip=None): # get the console info
-        if ps3ip == None:
-            return False, 'Console IP is None.'
+    def getconsoleinfo(self) -> ResultSet: # get the console info
+        '''
+        Gets the PS3 information, and returns it in a JSON object
         
+        :return dict: The JSON object holding all the data'''
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
-            if self.connect(ps3ip):
-                try:
-                    req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
+            try:
+                req = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
 
-                    if req.status_code == 200:
-                        soup = BeautifulSoup(req.text.encode('utf-8'), 'html.parser')
-                        return soup.findAll('a', attrs={'class': 's'})
-                    else:
-                        return False, f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
-                
-                except Exception as e:
-                    print(f'[PyPS3] [GETCONSOLEINFO] [EXCEPTION] {str(e)}')
-                    return False, str(e)
-            else:
-                return False, 'Console could not be found.'
+                if req.status_code == 200:
+                    soup = BeautifulSoup(req.text.encode('utf-8'), 'html.parser')
+                    return soup.findAll('a', attrs={'class': 's'})
+
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+
+            except Exception:
+                return False
     
-    def getfirmware(self, div=None):
-        if div == None:
-            return False, 'Div is None.'
-        
+    def getfirmware(self, div=None) -> str:
+        '''
+        Parses the firmware from the page
+
+        :return str: Returns the console firmware
+        '''
+
+        if div == None: raise DivIsNone('Div is none!')
         else:
             try:
                 clutter = div[4].text
@@ -296,102 +188,102 @@ class API:
                     if l != "P": firmware += l
                     else: break
                 
-                if firmware == None:
-                    return False, 'Console returned empty firmware.'
-
-                else:
-                    return firmware.split(': ', 1)[1]
+                if firmware == None: raise EmptyFirmwareResponse('Console returned empty firmware.')
+                else: return firmware.split(': ', 1)[1]
             
-            except Exception as e:
-                print(f'[PyPS3] [GETFIRMWARE] [EXCEPTION] {str(e)}')
-                return False, str(e)
+            except Exception:
+                raise GetFirmwareException('Unable to parse firmware')
     
-    def getcurrentgame(self, ps3ip=None):
-        if ps3ip == None:
-            return False, 'Console IP is None'
+    def getcurrentgame(self) -> str:
+        '''
+        Gets the current game (XMB Menu if no game is being played)
 
+        :return str: Returns the game name
+        '''
+    
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                req = requests.get(f'http://{ps3ip}/cpursx.ps3?/sman.ps3')
+                req = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
 
                 if req.status_code == 200:
+
                     soup = BeautifulSoup(req.text, 'html.parser')
-                    strings = soup.findAll('h2')
-                    res = strings[0].text
+                    res = soup.findAll('h2')[0].text
                     game = None
 
-                    if res.startswith('BL') or res.startswith('NP') or res.startswith('BC'):
-                        game = res.split(' ', 1)[1].encode('ascii', 'ignore').decode()
-
-                    else: 
-                        game = 'XMB Menu'
+                    if res.startswith('BL') or res.startswith('NP') or res.startswith('BC'): game = res.split(' ', 1)[1].encode('ascii', 'ignore').decode()
+                    else: game = 'XMB Menu'
                     
-                    return True, game
-    
-                else:
-                    return False, f'Got status code {str(req.status_code)} when getting game, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+                    return game
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+            except Exception:
+                raise GetCurrentGameException('Unable to parse game')
 
-
-            except Exception as e:
-                print(f'[PyPS3] [GETCURRENTGAME] [EXCEPTION] {str(e)}')
-                return False, str(e)
-
-
-    def getproclist(self, ps3ip=None):
-        if ps3ip == None:
-            return False, 'Console IP is None.'
+    def getproclist(self) -> list:
+        '''
+        Gets the running processes on the console, use `getprocs()` to get the parsed list
         
+        :return list: Returns the running processes
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                req = requests.get(f'http://{ps3ip}/home.ps3mapi/sman.ps3')
+                req = requests.get(f'http://{Core.ps3ip}/home.ps3mapi/sman.ps3')
                 if req.status_code == 200:
-                    #re.findall('\<option value="(.*?)\</option>', kek)
-                    regex = '\<select name="proc">(.*?)\</select>'
 
-                    return True, re.findall(regex, req.text)
-                else:
-                    return False, f'Got status code {str(req.status_code)} when getting process list, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+                    return re.findall('\<select name="proc">(.*?)\</select>', req.text)
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
             
-            except Exception as e:
-                print(f'[PyPS3] [GETPROCLIST] [EXCEPTION] {str(e)}')
-                return False, str(e)
+            except Exception:
+                raise GetProcListException('Failed to parse process list')
     
-    def getprocs(self, ps3ip=None):
-        if ps3ip == None:
-            return False, 'Console IP is None.'
+    def getprocs(self) -> dict:
+        '''
+        Gets the current game(s)
         
+        :return dict: Returns the running games in a dict
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                procs = self.getproclist(ps3ip)
+                procs = self.getproclist(Core.ps3ip)
                 procs_list = {}
+
                 for proc in re.findall('\<option value="(.*?)\</option>', procs[1][0]):
+
                     pid, proc_name = proc.split('"/>')
-                    if proc_name.startswith('01000300') or proc_name.startswith('01000400'): pass
+
+                    if proc_name.startswith('01000300') or proc_name.startswith('01000400'): pass # if its a system process, skip
                     else: procs_list.update({pid: proc_name})
                 
                 if len(procs_list) <= 0:
-                    return True, 'No processes found.'
-                return True, procs_list
+                    return 'No processes found.'
 
-            except Exception as e:
-                print(f'[PyPS3] [GETPROCS] [EXCEPTION] {str(e)}')
-                return False, str(e)
+                return procs_list
+            except Exception:
+                raise GetProcsException('Failed to parse games')
 
-    def memwrite(self, ps3ip=None, process=None, patch_addr=None, hex_code=None): # write to memory
-        if ps3ip == None \
-        or process == None \
-        or patch_addr == None \
-        or hex_code == None:
-            return False, 'Console IP/Process/Patch Address/Hex Code is None.'
+    def memwrite(self, process=None, patch_addr=None, hex_value=None) -> bool: # write to memory
+        '''
+        Patches a specific address with a hex value
+        
+        :param process str: The process to write it to
+        :param patch_addr str: The patch address
+        :param hex_value str: The new hex value to patch
+        '''
 
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        elif process == None: raise ProcessIsNone('Process can\'t be none!')
+        elif patch_addr == None: raise PatchAddressIsNone('Patch address can\'t be none!')
+        elif hex_value == None: raise HexValueIsNone('Hex value can\'t be none!')
         else:
             try:
-                req = requests.get(f'http://{ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_code}')
-                if req.status_code == 200:
-                    return True
-                else:
-                    return False, f'Got status code {str(req.status_code)} when writing to memory, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".'
+                req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_value}')
+                if req.status_code == 200: return True
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
 
-            except Exception as e:
-                print(f'[PyPS3] [MEMWRITE] [EXCEPTION] {str(e)}')
-                return False, str(e)
+            except Exception:
+                raise MemWriteException('Failed to write to console memory')
