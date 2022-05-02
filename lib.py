@@ -30,15 +30,20 @@
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.                   #
 # ************************************************************ #
 
-import requests, re, socket
+import requests, re, socket, time
 from bs4 import BeautifulSoup, ResultSet
 
 from src.exceptions import *
 from src.core import Core
 
-class API:
+class API():
     def __init__(self):
         pass
+
+    def get(self, url):
+        req = requests.get(url)
+        if req.status_code == 200: return True
+        else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
 
     def connect(self, ps3ip=None) -> bool: # check if its up
         '''
@@ -55,11 +60,13 @@ class API:
                 sock.settimeout(5)
 
                 sock_connect = sock.connect_ex((ps3ip, 80))
+                time.sleep(0.2)
                 sock.close()
 
                 if sock_connect == 0: # we are able to connect
                     Core.ps3ip = ps3ip
                     return True
+
             except Exception:
                 raise ConsoleConnectionError('Failed to connec to the PS3')
     
@@ -72,15 +79,12 @@ class API:
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
-        if not rbt_type in ['soft', 'hard', 'quick', 'vsh']: raise InvalidRebootType('Reboot type is invalid')
+        if not rbt_type.lower() in ['soft', 'hard', 'quick', 'vsh']: raise InvalidRebootType('Reboot type is invalid')
         else:
             try:
-                req = requests.get(f'http://{Core.ps3ip}/reboot.ps3?{type}')
-                if req.status_code == 200: return True
-                else:
-                    raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when rebooting console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                return self.get(f'http://{Core.ps3ip}/reboot.ps3?{type}')
             except Exception:
-                return False
+                raise RebootException('Failed to reboot')
     
     def shutdown(self) -> bool:
         '''
@@ -91,14 +95,11 @@ class API:
         if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                req = requests.get(f'http://{Core.ps3ip}/shutdown.ps3')
-                if req.status_code == 200: return True
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when shutting down console, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
-
+                return self.get(f'http://{Core.ps3ip}/shutdown.ps3')
             except Exception:
-                return False
+                raise ShutdownException('Failed to shit down')
     
-    def led(self, led_clr=None, led_mode=None) -> bool:
+    def setled(self, led_clr=None, led_mode=None) -> bool:
         '''
         Change the PS3 LED lights
         
@@ -123,9 +124,7 @@ class API:
                 # Blink Alt2 = 5
                 # Blink Alt3 = 6
                 
-                req = requests.get(f'http://{Core.ps3ip}/led.ps3mapi?color={str(led_clr)}&mode={str(led_mode)}')
-                if req.status_code == 200: return True
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when changing led, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                return self.get(f'http://{Core.ps3ip}/led.ps3mapi?color={str(led_clr)}&mode={str(led_mode)}')
             except Exception:
                 return False
     
@@ -146,13 +145,11 @@ class API:
                 # twice = 2
                 # triple = 3
 
-                req = requests.get(f'http://{Core.ps3ip}/buzzer.ps3mapi?mode={str(buzz_mode)}') # buzz endpoint
-                if req.status_code == 200: return True
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when sounding buzzer, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                return self.get(f'http://{Core.ps3ip}/buzzer.ps3mapi?mode={str(buzz_mode)}') # buzz endpoint
             except Exception:
                 return False
 
-    def getconsoleinfo(self) -> ResultSet: # get the console info
+    def getConsoleInfo(self) -> ResultSet: # get the console info
         '''
         Gets the PS3 information, and returns it in a JSON object
         
@@ -160,23 +157,26 @@ class API:
         if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                req = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
+                req = self.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
 
-                if req.status_code == 200:
+                if req:
                     soup = BeautifulSoup(req.text.encode('utf-8'), 'html.parser')
                     return soup.findAll('a', attrs={'class': 's'})
 
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                else:
+                    raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
 
             except Exception:
                 return False
     
-    def getfirmware(self, div=None) -> str:
+    def getFirmware(self) -> str:
         '''
         Parses the firmware from the page
 
         :return str: Returns the console firmware
         '''
+
+        div = self.getconsoleinfo()[0]
 
         if div == None: raise DivIsNone('Div is none!')
         else:
@@ -194,7 +194,67 @@ class API:
             except Exception:
                 raise GetFirmwareException('Unable to parse firmware')
     
-    def getgamename(self) -> str:
+    def getTemps(self) -> dict:
+        '''
+        Gets the consoles temperature
+
+        :return dict: Returns the CPU, RSX and max temperature
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('please enter a valid Playstation target IP')
+        else:
+            page = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3').text
+            cpu, maxtemp, rsx = re.findall(r'<a class=\"s\" href=\"/cpursx.ps3\?up\">CPU: (.*?)\°C \(MAX: (.*?)\°C\)<br>RSX: (.*?)\°C</a>', page)[0]
+
+            return {'cpu': cpu, 'rsx': rsx, 'max': maxtemp}
+    
+    def setFanSpeed(self, speed: None) -> bool:
+        '''
+        Sets the fan speed (in %)
+
+        :param speed int: The fan speed (in %)
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('please enter a valid Playstation target IP')
+        elif speed == None or not str(speed).isdigit(): raise SpeedIsNone('Speed has to be integer!')
+        else:
+            return self.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3?/cpursx.ps3?fan={str(speed)}')
+    
+    def ejectCD(self) -> bool:
+        '''
+        Ejects the CD out of the tray
+
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('please enter a valid Playstation target IP')
+        else:
+            return self.get(f'http://{Core.ps3ip}/eject.ps3')
+    
+    def exitToXMB(self):
+        '''
+        Exits the game to the XMB screen
+
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('please enter a valid Playstation target IP')
+        else:
+            return self.get(f'http://{Core.ps3ip}/xmb.ps3$exit')
+    
+    def reloadPS3Game(self):
+        '''
+        Exits, and re-enters the game
+
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('please enter a valid Playstation target IP')
+        else:
+            return self.get(f'http://{Core.ps3ip}/xmb.ps3$reloadgame')
+
+    def getGameName(self) -> str:
         '''
         Gets the current game name (XMB Menu if no game is being played)
 
@@ -216,13 +276,13 @@ class API:
                     else: game = 'XMB Menu'
                     
                     return game
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
             except Exception:
                 raise GetCurrentGameException('Unable to parse game')
 
-    def getproclist(self) -> list:
+    def getProclist(self) -> list:
         '''
-        Gets the running processes on the console, use `getprocs()` to get the parsed list
+        Gets the running processes on the console, use `getProcs()` to get the parsed list
         
         :return list: Returns the running processes
         '''
@@ -234,12 +294,12 @@ class API:
                 if req.status_code == 200:
 
                     return re.findall('\<select name="proc">(.*?)\</select>', req.text)
-                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
             
             except Exception:
                 raise GetProcListException('Failed to parse process list')
     
-    def getprocs(self, gameonly=True) -> dict:
+    def getProcs(self, gameonly=True) -> dict:
         '''
         Gets the current game(s)
         
@@ -267,13 +327,14 @@ class API:
             except Exception:
                 raise GetProcsException('Failed to parse games')
 
-    def memwrite(self, process=None, patch_addr=None, hex_value=None) -> bool: # write to memory
+    def memWrite(self, process=None, patch_addr=None, hex_value=None) -> bool:
         '''
         Patches a specific address with a hex value
         
         :param process str: The process to write it to
         :param patch_addr str/list: The patch address (or addresses)
         :param hex_value str: The new hex value to patch
+        :return bool: True, False
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
@@ -281,18 +342,68 @@ class API:
         elif patch_addr == None: raise PatchAddressIsNone('Patch address can\'t be none!')
         elif hex_value == None: raise HexValueIsNone('Hex value can\'t be none!')
         else:
+            patch_addr = patch_addr.replace('0x','').replace('0X','')
             try:
-                
+
                 if type(patch_addr) == list:
                     for addr in patch_addr:
                         req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={addr}&val={hex_value}')
                         if req.status_code == 200: continue
-                        else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                        else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                    return True
                 else:
-                    req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_value}')
-
-                    if req.status_code == 200: return True
-                    else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} when getting console info, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                    return self.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={patch_addr}&val={hex_value}')
 
             except Exception:
                 raise MemWriteException('Failed to write to console memory')
+    
+    def memView(self, process=None, read_addr=None, pretty=False) -> str | list:
+        '''
+        Reads from the process
+        
+        :param process str: The process to read from
+        :param read_addr str: The patch address to read from
+        :return str/list: string if `pretty` has been set to True else list
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        elif process == None: raise ProcessIsNone('Process can\'t be none!')
+        elif read_addr == None: raise ReadAddressIsNone('Read address can\'t be none!')
+        else:
+            try:
+                read_addr = read_addr.replace('0x','').replace('0X','')
+                process = f'0x{process}' if not process.startswith('0x') else process
+
+                page = requests.get(f'http://{Core.ps3ip}/getmem.ps3mapi?proc={process}&addr={read_addr}&len=256')
+                memview = re.findall(r'\<font color=\#ff0\>\<\/font\>\<hr\>(.*?)\<textarea id=\"output\"', page.text)[0]
+
+                return memview.split('<br>') if not pretty \
+                    else '\n'.join(memview.split('<br>'))
+
+            except Exception:
+                raise MemReadException('Failed to read from console memory')
+
+    
+    def memRead(self, process=None, read_addr=None) -> str:
+        '''
+        Reads from a specific address
+        
+        :param process str: The process to read from
+        :param read_addr str: The patch address to read from
+        :return str: memory value
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
+        elif process == None: raise ProcessIsNone('Process can\'t be none!')
+        elif read_addr == None: raise ReadAddressIsNone('Read address can\'t be none!')
+        else:
+            try:
+                read_addr = read_addr.replace('0x','').replace('0X','')
+                process = f'0x{process}' if not process.startswith('0x') else process
+                
+                page = requests.get(f'http://{Core.ps3ip}/getmem.ps3mapi?proc={process}&addr={read_addr}&len=256')
+                memview = re.findall(r'\<textarea id=\"output\" style=\"display\:none\"\>(.*?)\<\/textarea\>', page.text)
+                return memview[0]
+
+            except Exception:
+                raise MemReadException('Failed to read from console memory')

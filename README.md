@@ -35,17 +35,17 @@ ip = input('IP: ') # get PS3 address
 if lib.API().connect(ip):
 	print('Connected!')
 
-	proc = lib.API().getprocs(ip) # get game process
+	proc = lib.API().getProcs(ip) # get game process
 
 	# write to PS3
-	lib.API().memwrite(proc, '1780F43', '05') # enable godmode
-	lib.API().memwrite(proc, '1CB7BF8', '3E 80') # enable slowmotion mode
-	lib.API().memwrite(proc, '1CAF9D8', '41 48') # enable low gravity
+	lib.API().memWrite(proc, '1780F43', '05') # enable godmode
+	lib.API().memWrite(proc, '1CB7BF8', '3E 80') # enable slowmotion mode
+	lib.API().memWrite(proc, '1CAF9D8', '41 48') # enable low gravity
 ```
 
 ----
 
-### Writing to multiple addresses for a single mod
+### Setting a single hex value for multiple addresses for a single mod
 ```py
 import lib
 
@@ -53,8 +53,8 @@ ip = input('IP: ') # get PS3 address
 if lib.API().connect(ip):
 	print('Connected!')
 
-	proc = lib.API().getprocs(ip) # get game process
-	lib.API().memwrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49 FF FF') # write to the memory
+	proc = lib.API().getProcs(ip) # get game process
+	lib.API().memWrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49 FF FF') # write to the memory
 ```
 
 ----
@@ -69,16 +69,16 @@ class Mods:
 	
 	def dogodmode(self, enable, proc):
 		if enable:
-			if lib.API().memwrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
+			if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
 		
 		elif not enable:
-			if lib.API().memwrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
+			if lib.API().memWrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
 
 ip = input('IP: ')
 if lib.API().connect(ip):
 	print('Connected!')
 
-	proc = lib.API().getprocs(ip)
+	proc = lib.API().getProcs(ip)
 
 	while 1:
 		mod = input('Enter mod: ')
