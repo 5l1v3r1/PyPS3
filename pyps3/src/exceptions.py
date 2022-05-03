@@ -8,6 +8,9 @@ class InvalidHTTPResponse(Exception): pass
 class InvalidLedCode(Exception): pass
 class InvalidLedMode(Exception): pass
 class InvalidBuzzMode(Exception): pass
+class InvalidNotificationType(Exception): pass
+class InvalidNotificationMessage(Exception): pass
+class InvalidNotificationSound(Exception): pass
 class DivIsNone(Exception): pass
 class SpeedIsNone(Exception): pass
 class EmptyFirmwareResponse(Exception): pass
