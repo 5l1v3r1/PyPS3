@@ -62,10 +62,10 @@ class API():
 
         output = ''.join(input_) if type(input_) == list else input_ # allows lists
         for old, new in [
+                (',', ''), # removes commas
                 (' ', ''), # removes spaces
                 ('0x', ''), # removes this, used by C# CCAPI and stuff as bytes
                 ('0X', ''), # same as above, but uppercase
-                (',', '') # removes commas
             ]:
             output=output.replace(old, new)
         
@@ -82,14 +82,9 @@ class API():
         if ps3ip == None: raise ConsoleNotFound('Please enter a valid Playstation target IP')
         else:
             try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(5)
+                
 
-                sock_connect = sock.connect_ex((ps3ip, 80))
-                time.sleep(0.2)
-                sock.close()
-
-                if sock_connect == 0: # we are able to connect
+                if self.get(f'http://{ps3ip}/index.ps3'):
                     Core.ps3ip = ps3ip
                     return True
 
@@ -105,7 +100,7 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        if not rbt_type.lower() in ['soft', 'hard', 'quick', 'vsh']: raise InvalidRebootType('Reboot type is invalid')
+        if not rbt_type.lower() in ['soft', 'hard', 'quick', 'vsh']: raise InvalidParam('Reboot type is invalid')
         else:
             try:
                 return self.get(f'http://{Core.ps3ip}/reboot.ps3?{type}')
@@ -134,8 +129,8 @@ class API():
         :return bool: True, False
         '''
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif led_clr == None or not led_clr in [0, 1, 2]: raise InvalidLedCode('Invalid LED code') 
-        elif led_mode == None or not led_mode in [0, 1, 2, 3, 4, 5, 6]: raise InvalidLedMode('Invalid LED mode')
+        elif led_clr == None or not led_clr in [0, 1, 2]: raise InvalidParam('Invalid LED code') 
+        elif led_mode == None or not led_mode in [0, 1, 2, 3, 4, 5, 6]: raise InvalidParam('Invalid LED mode')
         else:
             try:
                 # Red = 0
@@ -163,36 +158,37 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif buzz_mode == None or not buzz_mode in [1, 2,3]: raise InvalidBuzzMode('Invalid buzz mode') 
+        elif buzz_mode == None or not buzz_mode in [1, 2,3]: raise InvalidParam('Invalid buzz mode') 
         
         else:
             try:
-                # once = 1
-                # twice = 2
-                # triple = 3
-
                 return self.get(f'http://{Core.ps3ip}/buzzer.ps3mapi?mode={str(buzz_mode)}') # buzz endpoint
             except Exception:
                 return False
             
-    def notify(self, noti_type=1, noti_msg='Hello!', snd_type=5) -> bool:
+    def notify(self, noti_type=1, noti_msg='', snd_type=5, bottom=False) -> bool:
         '''
         Sends a notification to the PS3
 
         :param noti_type int: Notification type (0-50)
         :param noti_msg str: Message to send
         :param snd_type int: Sound to play when showing the notification (0-9)
+        :param bottom bool: Wether to show the message at the bottom
         :return bool: True, False
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif not noti_type in [x for x in range(51)] or type(noti_type) != int: raise InvalidNotificationType('Notification type should be integer, and between 0 and 50')
-        elif type(noti_msg) != str: raise InvalidNotificationMessage('Notification message should be string')
-        elif not snd_type in [x for x in range(10)] or type(snd_type) != int: raise InvalidNotificationSound('Notification sound should be integer, and between 0 and 9')
+        elif not noti_type in [x for x in range(51)] or type(noti_type) != int: raise InvalidParam('Notification type should be integer, and between 0 and 50')
+        elif type(noti_msg) != str: raise InvalidParam('Notification message should be string')
+        elif not snd_type in [x for x in range(10)] or type(snd_type) != int: raise InvalidParam('Notification sound should be integer, and between 0 and 9')
         else:
             try:
+                path = 'popup.ps3' if len(noti_msg) == 0 else \
+                        f'popup.ps3?{noti_msg}&icon={str(noti_type)}&snd={str(snd_type)}' if not bottom else \
+                            f'popup.ps3*{noti_msg}' # shows system information if no message is supplied
 
-                return self.get(f'http://{Core.ps3ip}/notify.ps3mapi?msg={noti_msg}&icon={str(noti_type)}&snd={str(snd_type)}')
+                return self.get(f'http://{Core.ps3ip}/{path}')
+
             except Exception:
                 return False
 
@@ -225,7 +221,7 @@ class API():
 
         div = self.getconsoleinfo()[0]
 
-        if div == None: raise DivIsNone('Div is none!')
+        if div == None: raise ParamIsNone('Div is none!')
         else:
             try:
                 clutter = div[4].text
@@ -264,7 +260,7 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif speed == None or not str(speed).isdigit(): raise SpeedIsNone('Speed has to be integer!')
+        elif speed == None or not str(speed).isdigit(): raise ParamIsNone('Speed has to be integer!')
         else:
             return self.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3?/cpursx.ps3?fan={str(speed)}')
     
@@ -385,9 +381,9 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif process == None: raise ProcessIsNone('Process can\'t be none!')
-        elif patch_addr == None: raise PatchAddressIsNone('Patch address can\'t be none!')
-        elif hex_value == None: raise HexValueIsNone('Hex value can\'t be none!')
+        elif process == None: raise ParamIsNone('Process can\'t be none!')
+        elif patch_addr == None: raise ParamIsNone('Patch address can\'t be none!')
+        elif hex_value == None: raise ParamIsNone('Hex value can\'t be none!')
         else:
             process = f'0x{process}' if not process.startswith('0x') else process
             hex_value = self.clean(hex_value)
@@ -416,8 +412,8 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif process == None: raise ProcessIsNone('Process can\'t be none!')
-        elif read_addr == None: raise ReadAddressIsNone('Read address can\'t be none!')
+        elif process == None: raise ParamIsNone('Process can\'t be none!')
+        elif read_addr == None: raise ParamIsNone('Read address can\'t be none!')
         else:
             try:
                 read_addr = self.clean(read_addr)
@@ -442,8 +438,8 @@ class API():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif process == None: raise ProcessIsNone('Process can\'t be none!')
-        elif read_addr == None: raise ReadAddressIsNone('Read address can\'t be none!')
+        elif process == None: raise ParamIsNone('Process can\'t be none!')
+        elif read_addr == None: raise ParamIsNone('Read address can\'t be none!')
         else:
             try:
                 process = f'0x{process}' if not process.startswith('0x') else process
@@ -455,3 +451,33 @@ class API():
 
             except Exception:
                 raise MemReadException('Failed to read from console memory')
+        
+    def uploadFile(self, local_path=None, destination=None, filename=None, isbyte=False) -> bool:
+        '''
+        Uploads a local file
+        
+        :param local_path str: Location of the file to be uploaded
+        :param destination str: Destination of file
+        :param filename str: Name of the file to be saved as
+        :param isbyte bool: Wether we should open the file in `Read Bytes` mode
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
+        elif local_path == None: raise ParamIsNone('Local path can\'t be none!')
+        elif destination == None: raise ParamIsNone('Destination can\'t be none!')
+        elif filename == None: raise ParamIsNone('Filename can\'t be none!')
+        elif type(isbyte) != bool: raise InvalidParam('IsByte parameter has to be bool!')
+        else:
+            try:
+                with open(local_path, 'rb' if isbyte else 'r', buffering=(16*1024*1024)) as fd:
+                    parsed_content = fd.read(1024*1024).replace('\n', '|').replace('\r\n', '|') # replaces newlines with "|" because that is the line seperator
+
+                req = None
+                try:
+                    req = requests.get(f'http://{Core.ps3ip}/write.ps3/{destination.strip()}/{filename}&t={parsed_content}') # since webman responds with 1225 if it uploaded, our helper function won't help
+                except requests.RequestException: pass
+
+                return req.status_code == 1225 if not req == None else True
+            except Exception:
+                raise MemWriteException('Failed to upload file')
