@@ -32,7 +32,7 @@ ip = input('IP: ') # get PS3 address
 if API().connect(ip):
     print('Connected!')
 
-    proc = API().getProcs(ip) # get game process
+    proc = API().getProcs() # get game process
 
     # write to PS3
     API().memWrite(proc, '1780F43', '05') # enable godmode
@@ -50,8 +50,8 @@ ip = input('IP: ') # get PS3 address
 if API().connect(ip):
     print('Connected!')
 
-    proc = API().getProcs(ip) # get game process
-    API().memWrite(ip, proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49FFFF') # write to the memory
+    proc = API().getProcs() # get game process
+    API().memWrite(proc, ['1CAF0D8', '1CAF138', '1CAF198'], '49FFFF') # write to the memory
 ```
 
 ----
@@ -67,15 +67,15 @@ class Mods:
     def dogodmode(self, enable, proc):
         if enable:
             if API().memWrite(proc, self.OFFSET_ZM_GODMODE, '05'): print('Godmode enabled')
-        
         elif not enable:
             if API().memWrite(proc, self.OFFSET_ZM_GODMODE, '04'): print('Godmode disabled')
 
 ip = input('IP: ')
+
 if API().connect(ip):
     print('Connected!')
 
-    proc = API().getProcs(ip)
+    proc = API().getProcs()
 
     while 1:
         mod = input('Enter mod: ')

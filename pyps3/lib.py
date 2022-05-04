@@ -353,10 +353,10 @@ class API():
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
         else:
             try:
-                procs = self.getproclist(Core.ps3ip)
+                procs = self.getProclist()
                 procs_list = {}
 
-                for proc in re.findall('\<option value="(.*?)\</option>', procs[1][0]):
+                for proc in re.findall(r'\<option value\=\"(.*?)\<option value\=', ''.join(procs)):
 
                     pid, proc_name = proc.split('"/>')
 
@@ -366,7 +366,7 @@ class API():
                 if len(procs_list) <= 0:
                     return 'No processes found.'
 
-                return procs_list if not gameonly else list(procs_list[1])[0]
+                return procs_list if not gameonly else list(procs_list)[0]
             except Exception:
                 raise GetProcsException('Failed to parse games')
 
