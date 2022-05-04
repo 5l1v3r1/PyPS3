@@ -29,3 +29,46 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR   #
 # THE USE OR OTHER DEALINGS IN THE SOFTWARE.                   #
 # ************************************************************ #
+
+'''
+Submodule for all misc/helper functions
+'''
+
+import requests
+from pyps3.src.exceptions import *
+from pyps3.src.core import Core
+
+class Utils():
+    def __init__(self):
+        pass
+
+    def get(self, url) -> bool | InvalidHTTPResponse:
+        '''
+        Helper function to request a page, and return True if it succeeded
+        
+        :param str url: The URL to request
+        :return bool: Returns True if it succeeded, or throws an error if it failed
+        '''
+
+        req = requests.get(url) 
+        if req.status_code == 200: return True
+        else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+    
+    def clean(self, input_) -> str:
+        '''
+        Helper function to clean a address or hex value
+        
+        :param input_ str:
+        :return str: Returns the cleaned object
+        '''
+
+        output = ''.join(input_) if type(input_) == list else input_ # allows lists
+        for old, new in [
+                (',', ''), # removes commas
+                (' ', ''), # removes spaces
+                ('0x', ''), # removes this, used by C# CCAPI and stuff as bytes
+                ('0X', ''), # same as above, but uppercase
+            ]:
+            output=output.replace(old, new)
+        
+        return output
