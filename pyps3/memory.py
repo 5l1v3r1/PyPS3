@@ -73,6 +73,31 @@ class Memory():
 
             except Exception:
                 raise MemWriteException('Failed to write to console memory')
+        
+    def memWriteMultiple(self, process=None, patch_hex=None) -> bool:
+        '''
+        Patches a specific address with a hex value
+        
+        :param process str: The process to write it to
+        :param patch_hex list: List with tuples in `(patch_addr, hex_value)` format
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
+        elif process == None: raise ParamIsNone('Process can\'t be none!')
+        elif patch_hex == None: raise ParamIsNone('Patch address can\'t be none!')
+        else:
+            process = f'0x{process}' if not process.startswith('0x') else process
+            try:
+
+                for addr, value in patch_hex:
+                    req = requests.get(f'http://{Core.ps3ip}/setmem.ps3mapi?proc={process}&addr={Utils().clean(addr)}&val={Utils().clean(value)}')
+                    if req.status_code == 200: continue
+                    else: raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
+                return True
+
+            except Exception:
+                raise MemWriteException('Failed to write to console memory')
     
     def memView(self, process=None, read_addr=None, pretty=False) -> str | list:
         '''
