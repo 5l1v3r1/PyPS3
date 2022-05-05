@@ -35,7 +35,6 @@ Submodule with misc functions
 '''
 
 import requests, re
-from bs4 import BeautifulSoup, ResultSet
 
 from pyps3.src.exceptions import *
 from pyps3.src.core import Core
@@ -70,26 +69,6 @@ class Misc():
 
             except Exception:
                 return False
-
-    def getConsoleInfo(self) -> ResultSet: # get the console info
-        '''
-        Gets the PS3 information, and returns it in a JSON object
-        
-        :return dict: The JSON object holding all the data'''
-        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        else:
-            try:
-                req = Utils().get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
-
-                if req:
-                    soup = BeautifulSoup(req.text.encode('utf-8'), 'html.parser')
-                    return soup.findAll('a', attrs={'class': 's'})
-
-                else:
-                    raise InvalidHTTPResponse( f'Got status code {str(req.status_code)} as response, which means "{self.HTTP_RESPONSE_CODES[req.status_code]}".')
-
-            except Exception:
-                return False
     
     def getFirmware(self) -> str:
         '''
@@ -98,20 +77,14 @@ class Misc():
         :return str: Returns the console firmware
         '''
 
-        div = Utils().getconsoleinfo()[0]
-
-        if div == None: raise ParamIsNone('Div is none!')
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
         else:
             try:
-                clutter = div[4].text
-                firmware = ''
-
-                for l in clutter: 
-                    if l != "P": firmware += l
-                    else: break
+                page = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3')
+                firmware = re.findall(r'href\=\"\/setup\.ps3\"\>Firmware\: (.*?)\<br\>\<br\>', page.text)
                 
-                if firmware == None: raise EmptyFirmwareResponse('Console returned empty firmware.')
-                else: return firmware.split(': ', 1)[1]
+                if firmware == None or len(firmware) == 0: raise EmptyFirmwareResponse('Console returned empty firmware.')
+                else: return firmware[0]
             
             except Exception:
                 raise GetFirmwareException('Unable to parse firmware')
@@ -125,10 +98,10 @@ class Misc():
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
         else:
-            page = requests.get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3').text
-            cpu, maxtemp, rsx = re.findall(r'<a class=\"s\" href=\"/cpursx.ps3\?up\">CPU: (.*?)\°C \(MAX: (.*?)\°C\)<br>RSX: (.*?)\°C</a>', page)[0]
+            page = requests.get(f'http://{Core.ps3ip}/cpursx_ps3').text
+            cpu, rsx = re.findall(r'CPU: (.*?)°C \| RSX: (.*?)°C', page)[0]
 
-            return {'cpu': cpu, 'rsx': rsx, 'max': maxtemp}
+            return {'cpu': cpu, 'rsx': rsx}
     
     def setFanSpeed(self, speed: None) -> bool:
         '''
@@ -141,7 +114,7 @@ class Misc():
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
         elif speed == None or not str(speed).isdigit(): raise ParamIsNone('Speed has to be integer!')
         else:
-            return Utils().get(f'http://{Core.ps3ip}/cpursx.ps3?/sman.ps3?/cpursx.ps3?fan={str(speed)}')
+            return Utils().get(f'http://{Core.ps3ip}/cpursx.ps3?fan={str(speed)}')
     
     def ejectCD(self) -> bool:
         '''

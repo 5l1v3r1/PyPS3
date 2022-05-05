@@ -31,7 +31,7 @@
 # ************************************************************ #
 
 '''
-Main submodule for connecting
+Main module for connecting
 '''
 
 import requests, re
@@ -46,11 +46,12 @@ class API():
     def __init__(self):
         pass
 
-    def connect(self, ps3ip=None) -> bool: # check if its up
+    def connect(self, ps3ip=None, notify=False) -> bool: # check if its up
         '''
         Connecs to the PS3
 
         :param ps3ip str: The Console IP address to connect to
+        :param notify bool: Wether to show a notification on the PS3
         :return bool: True, False
         '''
 
@@ -62,8 +63,9 @@ class API():
                 if Utils().get(f'http://{ps3ip}/index.ps3'):
                     Core.ps3ip = ps3ip
 
-                    Misc().notify(20, 'PyPS3: Connected!', 4)
-                    Misc().buzz(2)
+                    if notify:
+                        Misc().notify(20, 'PyPS3: Connected!', 4)
+                        Misc().buzz(2)
 
                     return True
 

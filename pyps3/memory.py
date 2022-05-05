@@ -149,3 +149,52 @@ class Memory():
 
             except Exception:
                 raise MemReadException('Failed to read from console memory')
+    
+    def poke(self, address, value, lv=1) -> bool:
+        '''
+        Pokes into lv1 or lv2 memory
+
+        :param address str: The address to poke
+        :param value str: Hex or text value
+        :param lv int: The lv memory (1 or 2)
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
+        elif address == None: raise ParamIsNone('Address can\'t be none!')
+        elif value == None: raise ParamIsNone('Value can\'t be none!')
+        elif type(lv) != int or not lv in [1,2]: raise InvalidParam('Lv has to be integer, and either 1 or 2!')
+        else:
+            try:
+                address = Utils().clean(address)
+                value = Utils().clean(value)
+                
+                return Utils().get(f'http://{Core.ps3ip}/poke.lv{str(lv)}?{address}={value}')
+            except Exception:
+                raise PokeException(f'Failed to poke into lv{str(lv)} memory')
+    
+    def peek(self, address, lv=1, pretty=False) -> bool:
+        '''
+        Peeks into lv1 or lv2 memory
+
+        :param address str: The address to peek
+        :param lv int: The lv memory (1 or 2)
+        :param pretty bool: Wether to show it as a "pretty" string
+        :return bool: True, False
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
+        elif address == None: raise ParamIsNone('Address can\'t be none!')
+        elif type(lv) != int or not lv in [1,2]: raise InvalidParam('Lv has to be integer, and either 1 or 2!')
+        else:
+            try:
+                address = Utils().clean(address)
+                
+                page = requests.get(f'http://{Core.ps3ip}/peek.lv{str(lv)}?{address}')
+                peeked = re.findall(r'\<pre\>(.*?)\<br\>\<hr\>', page.text)[0].split('<br>')
+
+                return peeked if not pretty \
+                    else '\n'.join(peeked)
+
+            except Exception:
+                raise PeekException(f'Failed to peek into lv{str(lv)} memory')
