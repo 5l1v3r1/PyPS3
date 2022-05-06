@@ -173,14 +173,14 @@ class Memory():
             except Exception:
                 raise PokeException(f'Failed to poke into lv{str(lv)} memory')
     
-    def peek(self, address, lv=1, pretty=False) -> bool:
+    def peek(self, address, lv=1, pretty=False) -> str | list:
         '''
         Peeks into lv1 or lv2 memory
 
         :param address str: The address to peek
         :param lv int: The lv memory (1 or 2)
         :param pretty bool: Wether to show it as a "pretty" string
-        :return bool: True, False
+        :return str/list: Returns the data
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
@@ -198,3 +198,35 @@ class Memory():
 
             except Exception:
                 raise PeekException(f'Failed to peek into lv{str(lv)} memory')
+    
+    def dump(self, dmp_type='full') -> bytes:
+        '''
+        Dumps lv1, lv2, full, flash or rsx memory. This can take some time, especially for the full and rsx memory!
+
+        :param type str: What to dump (lv1, lv2, full, flash or rsx)
+        :return bytes: Data of the dump
+        '''
+
+        if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
+        elif not dmp_type.lower() in ['lv1','lv2','full','flash','rsx']: raise InvalidParam('dmp_type has to be lv1, lv2, full, flash or rsx')
+        else:
+            try:
+                
+                page = requests.get(f'http://{Core.ps3ip}/dump.ps3?{dmp_type}', timeout=(9999,9999))
+
+                if page.status_code == 503: raise ConsoleIsBusy('Console is busy')
+                page.raise_for_status()
+
+                dump_path = re.findall(r'Dumped\: \<a class=\"f\" href=\"\/.*?\/\"\>\/.*?\<\/a\>\/\<a href=\"(.*?)"\>dump_'+dmp_type.lower()+r'\.bin\<\/a\>', page.text)
+                if dump_path != None and dump_path != []:
+                    path = dump_path[0]
+
+                    data = requests.get(f'http://{Core.ps3ip}{path}', timeout=(9999,9999))
+                    data.raise_for_status()
+
+                    return data.content
+                else:
+                    raise DumpException('Failed to find location of dumped memory file')
+
+            except Exception:
+                raise DumpException(f'Failed to dump {dmp_type} memory')
