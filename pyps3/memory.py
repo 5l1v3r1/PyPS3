@@ -208,7 +208,7 @@ class Memory():
         '''
 
         if Core.ps3ip == None: raise ConsoleNotFound('Please connect first')
-        elif not dmp_type.lower() in ['lv1','lv2','full','flash','rsx']: raise InvalidParam('dmp_type has to be lv1, lv2, full, flash or rsx')
+        elif not dmp_type.lower() in ['lv1','lv2','full','flash','rsx']: raise InvalidParam('dmp_type has to be lv1, lv2, full or rsx')
         else:
             try:
                 
